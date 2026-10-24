@@ -117,6 +117,15 @@ function applyEvent(state: RunState, e: RunEvent): RunState {
 }
 
 const STORAGE_KEY = "orbit:last-run";
+export const CODE_KEY = "orbit:access-code";
+
+export function readCode() {
+  try {
+    return localStorage.getItem(CODE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
 
 export function useRun() {
   const [state, dispatch] = useReducer(reducer, initial);
@@ -154,7 +163,7 @@ export function useRun() {
       const res = await fetch("/api/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal, demo }),
+        body: JSON.stringify({ goal, demo, code: readCode() }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {

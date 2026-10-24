@@ -54,14 +54,13 @@ Open http://localhost:3000. Keys go in `.env.local`, and all of them are optiona
 | `GEMINI_API_KEY` | Free tier | https://aistudio.google.com/apikey |
 | `TAVILY_API_KEY` | Free, 1,000 searches a month | https://app.tavily.com |
 | `ANTHROPIC_API_KEY` | Paid | https://platform.claude.com |
+| `ORBIT_ACCESS_CODE` | - | Any secret phrase you choose. Live runs then need it, and visitors without it get the demo |
 
 If `GEMINI_API_KEY` is set, Gemini runs the mission. Otherwise Claude runs it if its key is set, and with neither key you get demo mode.
 
 ## Deploy
 
-Push to GitHub and import the repo on Vercel. Add the same keys as environment variables to enable live runs. A live run can take a few minutes, and the route sets `maxDuration = 300`, which needs a Vercel plan that allows 300-second functions.
-
-> Before sharing a live deploy publicly, add rate limiting or a passcode so strangers can't spend your API credits.
+Push to GitHub and import the repo on Vercel. Add the same keys as environment variables to enable live runs. On a public deploy, also set `ORBIT_ACCESS_CODE` so strangers can't use up your quota. A live run can take a few minutes, and the route sets `maxDuration = 300`, which needs a Vercel plan that allows 300-second functions.
 
 ## Ideas for next steps
 

@@ -8,7 +8,7 @@ import remarkGfm from "remark-gfm";
 import { AgentBadge, Logo } from "@/components/ui";
 import { EXAMPLE_GOALS } from "@/lib/examples";
 import type { Deliverable, Task } from "@/lib/events";
-import { useRun, type FeedItem, type RunState } from "@/lib/useRun";
+import { CODE_KEY, readCode, useRun, type FeedItem, type RunState } from "@/lib/useRun";
 
 export default function Workspace() {
   const params = useSearchParams();
@@ -104,6 +104,25 @@ function StatusPill({ state }: { state: RunState }) {
 
 function Composer({ onStart }: { onStart: (goal: string, demo?: boolean) => void }) {
   const [goal, setGoal] = useState("");
+  const [locked, setLocked] = useState(false);
+  const [code, setCode] = useState("");
+
+  useEffect(() => {
+    setCode(readCode());
+    fetch("/api/run")
+      .then((r) => r.json())
+      .then((d: { locked?: boolean }) => setLocked(Boolean(d.locked)))
+      .catch(() => {});
+  }, []);
+
+  const saveCode = (value: string) => {
+    setCode(value);
+    try {
+      localStorage.setItem(CODE_KEY, value);
+    } catch {
+      // storage unavailable; the code is kept for this page only
+    }
+  };
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-16">
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">What should the team work on?</h1>
@@ -126,6 +145,19 @@ function Composer({ onStart }: { onStart: (goal: string, demo?: boolean) => void
           placeholder="e.g. Find 10 boutique fitness studios in Hyderabad that would pay for an online booking system, and write outreach for each"
           className="w-full resize-none rounded-lg border border-line bg-panel p-4 text-[15px] outline-none placeholder:text-muted/70 focus:border-accent"
         />
+        {locked && (
+          <label className="mt-3 flex flex-col gap-1.5 text-sm sm:flex-row sm:items-center sm:gap-3">
+            <span className="text-muted">Access code for live runs</span>
+            <input
+              type="password"
+              value={code}
+              onChange={(e) => saveCode(e.target.value)}
+              placeholder="Leave empty to watch a demo"
+              autoComplete="off"
+              className="rounded-md border border-line bg-panel px-3 py-1.5 outline-none placeholder:text-muted/60 focus:border-accent sm:w-64"
+            />
+          </label>
+        )}
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button
             type="submit"

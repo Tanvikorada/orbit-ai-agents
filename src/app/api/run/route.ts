@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { runAgent } from "@/lib/agent";
 import { runDemo } from "@/lib/demo";
@@ -16,13 +17,24 @@ const provider = () =>
       : null;
 const hasCredentials = () => provider() !== null;
 
+// When ORBIT_ACCESS_CODE is set, live runs need the code; everyone else gets the demo.
+const accessCode = () => process.env.ORBIT_ACCESS_CODE?.trim() || "";
+const digest = (s: string) => createHash("sha256").update(s).digest();
+const codeMatches = (given: unknown) =>
+  typeof given === "string" && timingSafeEqual(digest(given.trim()), digest(accessCode()));
+
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as { goal?: unknown; demo?: unknown };
+  const body = (await req.json().catch(() => ({}))) as { goal?: unknown; demo?: unknown; code?: unknown };
   const goal = typeof body.goal === "string" ? body.goal.trim().slice(0, 2000) : "";
   if (!goal) return Response.json({ error: "Describe a goal to start a run." }, { status: 400 });
 
   const run = provider();
-  const demo = body.demo === true || !run;
+  const hasCode = typeof body.code === "string" && body.code.trim() !== "";
+  if (run && accessCode() && hasCode && !codeMatches(body.code)) {
+    return Response.json({ error: "That access code is not right." }, { status: 403 });
+  }
+  const locked = Boolean(run && accessCode() && !hasCode && body.demo !== true);
+  const demo = body.demo === true || !run || locked;
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -33,6 +45,12 @@ export async function POST(req: Request) {
       };
       try {
         if (demo || !run) {
+          if (locked) {
+            emit({
+              type: "say",
+              text: "Live runs on this site need an access code, so here is a demo run instead. Add the code under the goal box to run it live.\n\n",
+            });
+          }
           await runDemo(goal, emit, req.signal);
         } else {
           emit({ type: "start", mode: "live", goal });
@@ -73,5 +91,5 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  return Response.json({ live: hasCredentials() });
+  return Response.json({ live: hasCredentials(), locked: hasCredentials() && accessCode() !== "" });
 }
