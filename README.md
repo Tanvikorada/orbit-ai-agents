@@ -2,6 +2,8 @@
 
 Describe a business outcome in one sentence. Orbit's four agents (Researcher, Analyst, Strategist, Writer) break it into a mission plan, research it on the live web, and hand back finished work: lead lists, outreach emails, briefs and plans. You watch every step stream in as it happens.
 
+**[Try it live → orbit-ai-agents.vercel.app](https://orbit-ai-agents.vercel.app)**. Visitors see a full demo run; live runs on the public site need an access code.
+
 ![Orbit workspace](docs/screenshot.jpg)
 
 ## What it shows off
