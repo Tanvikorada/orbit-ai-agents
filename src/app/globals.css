@@ -64,8 +64,65 @@ body {
   animation: rise 0.35s ease-out both;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Skeleton placeholder while the mission is being planned */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, var(--panel) 25%, var(--panel-2) 50%, var(--panel) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Indeterminate bar under the header while a run is active */
+@keyframes progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(400%); }
+}
+.progress-bar {
+  position: relative;
+  overflow: hidden;
+}
+.progress-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 25%;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: progress 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+@keyframes slide-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.slide-in {
+  animation: slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Older feed items fade out at the top of the hero replay */
+.fade-top {
+  mask-image: linear-gradient(to bottom, transparent, black 22%);
+}
+.fade-bottom {
+  mask-image: linear-gradient(to top, transparent, black 18%);
+}
+
+/* Soft accent light behind key areas */
+.glow {
+  background: radial-gradient(closest-side, rgb(242 181 68 / 0.12), transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .pulse-dot, .rise { animation: none; }
+  .pulse-dot, .rise, .spin, .shimmer, .slide-in, .progress-bar::after { animation: none; }
 }
 
 /* Markdown deliverables */

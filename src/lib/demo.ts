@@ -3,7 +3,7 @@ import type { Emit, RunEvent, Task } from "./events";
 // A scripted run used when no API key is configured, so the app is always
 // explorable (for example on a public portfolio deploy).
 
-const sleep = (ms: number, signal: AbortSignal) =>
+const pause = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     const t = setTimeout(resolve, ms);
     signal.addEventListener("abort", () => {
@@ -12,7 +12,9 @@ const sleep = (ms: number, signal: AbortSignal) =>
     });
   });
 
-export async function runDemo(goal: string, emit: Emit, signal: AbortSignal) {
+// `speed` scales every pause; 0 plays the whole run instantly (used for reduced motion).
+export async function runDemo(goal: string, emit: Emit, signal: AbortSignal, speed = 1) {
+  const sleep = (ms: number, s: AbortSignal) => pause(ms * speed, s);
   const short = goal.length > 70 ? goal.slice(0, 67) + "..." : goal;
 
   const tasks: Task[] = [

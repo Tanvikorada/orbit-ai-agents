@@ -1,14 +1,28 @@
 "use client";
 
+import {
+  ArrowRight,
+  CheckCircle,
+  Copy,
+  DownloadSimple,
+  FileText,
+  LockSimple,
+  Play,
+  Plus,
+  Stop,
+  WarningCircle,
+  X,
+} from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { AgentBadge, Logo } from "@/components/ui";
+import { FeedRow, TaskList } from "@/components/mission";
+import { Logo } from "@/components/ui";
 import { EXAMPLE_GOALS } from "@/lib/examples";
 import type { Deliverable, Task } from "@/lib/events";
-import { CODE_KEY, readCode, useRun, type FeedItem, type RunState } from "@/lib/useRun";
+import { CODE_KEY, readCode, useRun, type RunState } from "@/lib/useRun";
 
 export default function Workspace() {
   const params = useSearchParams();
@@ -30,32 +44,38 @@ export default function Workspace() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-bg/90 px-4 py-3 backdrop-blur sm:px-6">
-        <Link href="/" aria-label="Orbit home">
-          <Logo />
-        </Link>
-        {state.goal && (
-          <p className="hidden min-w-0 flex-1 truncate text-sm text-muted md:block" title={state.goal}>
-            <span className="text-line">/</span> {state.goal}
-          </p>
-        )}
-        <div className="ml-auto flex items-center gap-3">
-          <StatusPill state={state} />
-          {running ? (
-            <button onClick={stop} className="rounded-md border border-line px-3 py-1.5 text-sm hover:bg-panel-2">
-              Stop
-            </button>
-          ) : (
-            state.status !== "idle" && (
-              <button
-                onClick={reset}
-                className="whitespace-nowrap rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:brightness-110"
-              >
-                New run
-              </button>
-            )
+      <header className="sticky top-0 z-20 border-b border-line bg-bg/80 backdrop-blur-md">
+        <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
+          <Link href="/" aria-label="Orbit home" className="shrink-0">
+            <Logo />
+          </Link>
+          {state.goal && (
+            <p className="hidden min-w-0 flex-1 truncate text-sm text-muted md:block" title={state.goal}>
+              {state.goal}
+            </p>
           )}
+          <div className="ml-auto flex items-center gap-3">
+            <StatusPill state={state} />
+            {running ? (
+              <button
+                onClick={stop}
+                className="inline-flex items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm transition hover:bg-panel-2 active:scale-[0.98]"
+              >
+                <Stop size={14} weight="fill" /> Stop
+              </button>
+            ) : (
+              state.status !== "idle" && (
+                <button
+                  onClick={reset}
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-accent px-3.5 py-1.5 text-sm font-medium text-[#14110a] transition hover:brightness-110 active:scale-[0.98]"
+                >
+                  <Plus size={14} weight="bold" /> New run
+                </button>
+              )
+            )}
+          </div>
         </div>
+        {running && <div className="progress-bar h-px" />}
       </header>
 
       {state.status === "idle" ? (
@@ -85,18 +105,19 @@ function StatusPill({ state }: { state: RunState }) {
   const elapsed = Math.max(0, Math.round(((state.status === "running" ? now : state.endedAt) - state.startedAt) / 1000));
   const clock = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
   const label = { running: "Working", done: "Complete", error: "Error", stopped: "Stopped" }[state.status];
-  const dot = { running: "var(--accent)", done: "var(--analyst)", error: "var(--writer)", stopped: "var(--muted)" }[state.status];
   const tokens = state.usage.input + state.usage.output;
 
   return (
     <div className="flex items-center gap-3 font-mono text-xs text-muted">
       {state.mode === "demo" && (
-        <span className="rounded border border-line px-1.5 py-0.5 text-[10px] uppercase tracking-wider">Demo</span>
+        <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-wider">Demo</span>
       )}
-      {tokens > 0 && <span className="hidden sm:inline">{(tokens / 1000).toFixed(1)}k tokens</span>}
-      <span className="flex items-center gap-1.5 whitespace-nowrap text-text">
-        <span className={`h-2 w-2 rounded-full ${state.status === "running" ? "pulse-dot" : ""}`} style={{ background: dot }} />
-        {label} · {clock}
+      {tokens > 0 && <span className="hidden tabular-nums sm:inline">{(tokens / 1000).toFixed(1)}k tokens</span>}
+      <span className="flex items-center gap-1.5 whitespace-nowrap tabular-nums text-text">
+        {state.status === "running" && <span className="pulse-dot h-2 w-2 rounded-full bg-accent" />}
+        {state.status === "done" && <CheckCircle size={14} weight="fill" className="text-[var(--analyst)]" />}
+        {state.status === "error" && <WarningCircle size={14} weight="fill" className="text-[var(--writer)]" />}
+        {label} {clock}
       </span>
     </div>
   );
@@ -123,138 +144,133 @@ function Composer({ onStart }: { onStart: (goal: string, demo?: boolean) => void
       // storage unavailable; the code is kept for this page only
     }
   };
+
+  const submit = () => goal.trim() && onStart(goal.trim());
+
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">What should the team work on?</h1>
-      <p className="mt-3 text-muted">Describe an outcome. Orbit plans it, researches it live and hands back finished work.</p>
-      <form
-        className="mt-8"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (goal.trim()) onStart(goal.trim());
-        }}
-      >
-        <textarea
-          value={goal}
-          onChange={(e) => setGoal(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && goal.trim()) onStart(goal.trim());
+    <main className="relative flex flex-1 items-start justify-center overflow-hidden px-4 pb-16 pt-16 sm:pt-24">
+      <div className="glow pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[720px] -translate-x-1/2" />
+      <div className="relative w-full max-w-2xl">
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">What should the team work on?</h1>
+        <p className="mt-3 max-w-[60ch] text-muted">
+          Describe an outcome. Orbit plans it, researches it live and hands back finished work.
+        </p>
+
+        <form
+          className="mt-8 rounded-2xl border border-line bg-panel/80 p-2 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)] transition-colors focus-within:border-accent/60"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
           }}
-          rows={4}
-          maxLength={2000}
-          placeholder="e.g. Find 10 boutique fitness studios in Hyderabad that would pay for an online booking system, and write outreach for each"
-          className="w-full resize-none rounded-lg border border-line bg-panel p-4 text-[15px] outline-none placeholder:text-muted/70 focus:border-accent"
-        />
+        >
+          <label htmlFor="goal" className="sr-only">
+            Goal
+          </label>
+          <textarea
+            id="goal"
+            value={goal}
+            onChange={(e) => setGoal(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
+            }}
+            rows={4}
+            maxLength={2000}
+            placeholder="Find 10 boutique fitness studios in Hyderabad that would pay for online booking, and write outreach for each"
+            className="w-full resize-none bg-transparent p-3 text-[15px] leading-relaxed outline-none placeholder:text-muted"
+          />
+          <div className="flex flex-wrap items-center gap-2 border-t border-line px-2 pt-2">
+            <span className="hidden font-mono text-xs text-muted sm:inline">Ctrl + Enter to launch</span>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                disabled={!goal.trim()}
+                onClick={() => onStart(goal.trim(), true)}
+                className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm text-muted transition hover:bg-panel-2 hover:text-text disabled:opacity-40"
+              >
+                <Play size={14} /> Demo
+              </button>
+              <button
+                type="submit"
+                disabled={!goal.trim()}
+                className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-medium text-[#14110a] transition hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
+              >
+                Launch a run <ArrowRight size={14} weight="bold" />
+              </button>
+            </div>
+          </div>
+        </form>
+
         {locked && (
-          <label className="mt-3 flex flex-col gap-1.5 text-sm sm:flex-row sm:items-center sm:gap-3">
-            <span className="text-muted">Access code for live runs</span>
+          <div className="mt-4 flex flex-col gap-2">
+            <label htmlFor="code" className="flex items-center gap-1.5 text-sm text-muted">
+              <LockSimple size={14} /> Access code for live runs
+            </label>
             <input
+              id="code"
               type="password"
               value={code}
               onChange={(e) => saveCode(e.target.value)}
-              placeholder="Leave empty to watch a demo"
               autoComplete="off"
-              className="rounded-md border border-line bg-panel px-3 py-1.5 outline-none placeholder:text-muted/60 focus:border-accent sm:w-64"
+              className="w-full rounded-full border border-line bg-panel px-4 py-2 text-sm outline-none transition-colors focus:border-accent sm:w-72"
             />
-          </label>
+            <p className="text-xs text-muted">Without a code, runs play as a demo.</p>
+          </div>
         )}
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            disabled={!goal.trim()}
-            className="rounded-md bg-accent px-4 py-2 font-medium text-black hover:brightness-110 disabled:opacity-40"
-          >
-            Launch run
-          </button>
-          <button
-            type="button"
-            disabled={!goal.trim()}
-            onClick={() => onStart(goal.trim(), true)}
-            className="rounded-md border border-line px-4 py-2 text-sm hover:bg-panel-2 disabled:opacity-40"
-          >
-            Watch a demo run
-          </button>
-          <span className="font-mono text-xs text-muted">Ctrl + Enter</span>
-        </div>
-      </form>
-      <div className="mt-10">
-        <p className="mb-3 font-mono text-xs uppercase tracking-wider text-muted">Try one</p>
-        <div className="flex flex-col gap-2">
-          {EXAMPLE_GOALS.map((g) => (
-            <button
-              key={g}
-              onClick={() => setGoal(g)}
-              className="rounded-md border border-line bg-panel px-3 py-2 text-left text-sm text-muted hover:border-accent/60 hover:text-text"
-            >
-              {g}
-            </button>
-          ))}
+
+        <div className="mt-10">
+          <p className="mb-3 text-sm text-muted">Or start from an example</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {EXAMPLE_GOALS.map((g) => (
+              <button
+                key={g}
+                onClick={() => setGoal(g)}
+                className="rounded-xl border border-line bg-panel/60 px-4 py-3 text-left text-sm leading-snug text-muted transition hover:border-accent/50 hover:text-text"
+              >
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </main>
   );
 }
 
-const STATUS_ORDER: Task["status"][] = ["active", "todo", "blocked", "done"];
-
 function MissionBoard({ tasks, running }: { tasks: Task[]; running: boolean }) {
   const done = tasks.filter((t) => t.status === "done").length;
-  const sorted = useMemo(
-    () => [...tasks].sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)),
-    [tasks],
-  );
   return (
     <section className="bg-bg p-4 sm:p-5">
       <PanelTitle title="Mission board" meta={tasks.length ? `${done}/${tasks.length}` : undefined} />
       {tasks.length > 0 && (
         <div className="mb-4 h-1 overflow-hidden rounded-full bg-panel-2">
-          <div className="h-full bg-accent transition-all duration-500" style={{ width: `${(done / tasks.length) * 100}%` }} />
+          <div
+            className="h-full rounded-full bg-accent transition-all duration-700 ease-out"
+            style={{ width: `${(done / tasks.length) * 100}%` }}
+          />
         </div>
       )}
       {tasks.length === 0 ? (
-        <Empty text={running ? "Planning the mission..." : "No tasks yet."} pulse={running} />
+        running ? (
+          <SkeletonTasks />
+        ) : (
+          <Empty text="No tasks yet." />
+        )
       ) : (
-        <ul className="flex flex-col gap-2">
-          {sorted.map((t) => (
-            <li
-              key={t.id}
-              className={`rise rounded-lg border p-3 ${
-                t.status === "active" ? "border-accent/60 bg-panel-2" : "border-line bg-panel"
-              } ${t.status === "done" ? "opacity-70" : ""}`}
-            >
-              <div className="flex items-start gap-2.5">
-                <StatusIcon status={t.status} />
-                <div className="min-w-0 flex-1">
-                  <p className={`text-sm leading-snug ${t.status === "done" ? "text-muted line-through decoration-line" : ""}`}>
-                    {t.title}
-                  </p>
-                  {t.note && <p className="mt-1 text-xs text-muted">{t.note}</p>}
-                  <div className="mt-2">
-                    <AgentBadge agent={t.agent} />
-                  </div>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <TaskList tasks={tasks} />
       )}
     </section>
   );
 }
 
-function StatusIcon({ status }: { status: Task["status"] }) {
-  if (status === "done")
-    return (
-      <svg className="mt-0.5 shrink-0" width="16" height="16" viewBox="0 0 16 16" aria-label="Done">
-        <circle cx="8" cy="8" r="7" fill="var(--analyst)" />
-        <path d="M5 8.2l2 2 4-4.2" stroke="#0c0d0f" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-      </svg>
-    );
-  if (status === "active")
-    return <span className="pulse-dot mt-1 h-3 w-3 shrink-0 rounded-full border-2 border-accent" aria-label="In progress" />;
-  if (status === "blocked")
-    return <span className="mt-1 h-3 w-3 shrink-0 rounded-full bg-[var(--writer)]" aria-label="Blocked" />;
-  return <span className="mt-1 h-3 w-3 shrink-0 rounded-full border border-muted/60" aria-label="To do" />;
+function SkeletonTasks() {
+  return (
+    <div className="flex flex-col gap-2" aria-label="Planning the mission">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="shimmer h-[74px] rounded-xl border border-line" />
+      ))}
+      <p className="mt-1 text-xs text-muted">Planning the mission</p>
+    </div>
+  );
 }
 
 function LiveFeed({ state, onOpen }: { state: RunState; onOpen: (id: string) => void }) {
@@ -286,18 +302,22 @@ function LiveFeed({ state, onOpen }: { state: RunState; onOpen: (id: string) => 
         </ol>
         {state.status === "running" && (
           <p className="mt-4 flex items-center gap-2 font-mono text-xs text-muted">
-            <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-accent" /> agents working
+            <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-accent" /> Agents working
           </p>
         )}
         {state.summary && (
-          <div className="rise mt-6 rounded-lg border border-[var(--analyst)]/40 bg-panel p-4">
-            <p className="font-mono text-xs uppercase tracking-wider text-[var(--analyst)]">Mission complete</p>
+          <div className="rise mt-6 rounded-2xl border border-[var(--analyst)]/30 bg-[var(--analyst)]/[0.06] p-5">
+            <p className="flex items-center gap-2 text-sm font-medium text-[var(--analyst)]">
+              <CheckCircle size={16} weight="fill" /> Mission complete
+            </p>
             <p className="mt-2 text-[15px] leading-relaxed">{state.summary}</p>
           </div>
         )}
         {state.status === "error" && (
-          <div className="mt-6 rounded-lg border border-[var(--writer)]/50 bg-panel p-4 text-sm">
-            <p className="font-medium text-[var(--writer)]">Run failed</p>
+          <div className="mt-6 rounded-2xl border border-[var(--writer)]/40 bg-[var(--writer)]/[0.06] p-5 text-sm">
+            <p className="flex items-center gap-2 font-medium text-[var(--writer)]">
+              <WarningCircle size={16} weight="fill" /> Run failed
+            </p>
             <p className="mt-1 text-muted">{state.error}</p>
           </div>
         )}
@@ -305,73 +325,6 @@ function LiveFeed({ state, onOpen }: { state: RunState; onOpen: (id: string) => 
       </div>
     </section>
   );
-}
-
-function FeedRow({ item, onOpen }: { item: FeedItem; onOpen: (id: string) => void }) {
-  switch (item.kind) {
-    case "thought":
-      return (
-        <li className="rise border-l border-line pl-3 text-sm italic leading-relaxed text-muted">
-          <span className="mr-2 font-mono text-[10px] not-italic uppercase tracking-wider">reasoning</span>
-          {item.text}
-        </li>
-      );
-    case "say":
-      return <li className="rise whitespace-pre-wrap text-[15px] leading-relaxed">{item.text.trim()}</li>;
-    case "task":
-      return (
-        <li className="rise flex items-center gap-2 font-mono text-xs text-muted">
-          <StatusIcon status={item.status} />
-          {item.text}
-        </li>
-      );
-    case "search":
-      return (
-        <li className="rise rounded-lg border border-line bg-panel p-3">
-          <div className="flex items-start gap-2 text-sm">
-            <svg className="mt-[3px] shrink-0" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <circle cx="7" cy="7" r="5" stroke="var(--researcher)" strokeWidth="1.6" />
-              <path d="M11 11l3.5 3.5" stroke="var(--researcher)" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-            <p className="min-w-0">
-              <span className="text-muted">Searching</span> {item.query}
-            </p>
-          </div>
-          {item.sources.length > 0 && (
-            <ul className="mt-2 flex flex-wrap gap-1.5">
-              {item.sources.slice(0, 6).map((s) => (
-                <li key={s.url}>
-                  <a
-                    href={s.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block max-w-[240px] truncate rounded border border-line px-2 py-0.5 text-xs text-muted hover:text-text"
-                    title={s.title}
-                  >
-                    {hostname(s.url)} · {s.title}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-        </li>
-      );
-    case "deliverable":
-      return (
-        <li className="rise">
-          <button
-            onClick={() => onOpen(item.deliverableId)}
-            className="flex w-full items-center gap-3 rounded-lg border border-accent/40 bg-panel px-3 py-2.5 text-left hover:border-accent"
-          >
-            <DocIcon />
-            <span className="text-sm">
-              <span className="text-muted">Delivered</span> {item.title}
-            </span>
-            <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-xs text-accent">Open →</span>
-          </button>
-        </li>
-      );
-  }
 }
 
 function Deliverables({
@@ -387,21 +340,25 @@ function Deliverables({
     <section className="bg-bg p-4 sm:p-5">
       <PanelTitle title="Deliverables" meta={items.length ? String(items.length) : undefined} />
       {items.length === 0 ? (
-        <Empty text={running ? "Finished work will appear here." : "Nothing delivered yet."} />
+        <Empty text={running ? "Finished work will appear here as each task completes." : "Nothing delivered yet."} />
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((d) => (
             <li key={d.id} className="rise">
               <button
                 onClick={() => onOpen(d)}
-                className="w-full rounded-lg border border-line bg-panel p-3 text-left hover:border-accent/60"
+                className="group w-full rounded-xl border border-line bg-panel p-3.5 text-left transition hover:border-accent/50 hover:bg-panel-2"
               >
                 <div className="flex items-center gap-2">
-                  <DocIcon />
+                  <FileText size={14} className="text-accent" />
                   <span className="font-mono text-[10px] uppercase tracking-wider text-muted">{d.kind}</span>
+                  <ArrowRight
+                    size={14}
+                    className="ml-auto text-muted opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100"
+                  />
                 </div>
-                <p className="mt-1.5 text-sm font-medium">{d.title}</p>
-                <p className="mt-1 line-clamp-2 text-xs text-muted">{preview(d.content)}</p>
+                <p className="mt-2 text-sm font-medium leading-snug">{d.title}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">{preview(d.content)}</p>
               </button>
             </li>
           ))}
@@ -429,12 +386,13 @@ function Viewer({ deliverable, onClose }: { deliverable: Deliverable; onClose: (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60" onClick={onClose} role="dialog" aria-modal>
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal>
       <div
-        className="rise flex h-full w-full max-w-3xl flex-col border-l border-line bg-panel"
+        className="slide-in flex h-full w-full max-w-3xl flex-col border-l border-line bg-panel"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 border-b border-line px-5 py-3">
+          <FileText size={16} className="text-accent" />
           <span className="font-mono text-[10px] uppercase tracking-wider text-muted">{deliverable.kind}</span>
           <div className="ml-auto flex gap-2">
             <button
@@ -444,19 +402,27 @@ function Viewer({ deliverable, onClose }: { deliverable: Deliverable; onClose: (
                   setTimeout(() => setCopied(false), 1500);
                 });
               }}
-              className="rounded-md border border-line px-3 py-1 text-sm hover:bg-panel-2"
+              className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-sm transition hover:bg-panel-2"
             >
+              {copied ? <CheckCircle size={14} weight="fill" className="text-[var(--analyst)]" /> : <Copy size={14} />}
               {copied ? "Copied" : "Copy"}
             </button>
-            <button onClick={download} className="rounded-md border border-line px-3 py-1 text-sm hover:bg-panel-2">
-              Download .md
+            <button
+              onClick={download}
+              className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-sm transition hover:bg-panel-2"
+            >
+              <DownloadSimple size={14} /> Download
             </button>
-            <button onClick={onClose} className="rounded-md px-2 py-1 text-sm text-muted hover:text-text" aria-label="Close">
-              ✕
+            <button
+              onClick={onClose}
+              className="rounded-full p-1.5 text-muted transition hover:bg-panel-2 hover:text-text"
+              aria-label="Close"
+            >
+              <X size={16} />
             </button>
           </div>
         </div>
-        <article className="md scroll-thin flex-1 overflow-y-auto px-6 py-6 sm:px-10">
+        <article className="md scroll-thin flex-1 overflow-y-auto px-6 py-8 sm:px-10">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{ a: (props) => <a {...props} target="_blank" rel="noreferrer" /> }}
@@ -472,37 +438,15 @@ function Viewer({ deliverable, onClose }: { deliverable: Deliverable; onClose: (
 function PanelTitle({ title, meta }: { title: string; meta?: string }) {
   return (
     <div className="mb-4 flex items-center justify-between">
-      <h2 className="font-mono text-xs uppercase tracking-wider text-muted">{title}</h2>
-      {meta && <span className="font-mono text-xs text-muted">{meta}</span>}
+      <h2 className="text-xs font-medium text-muted">{title}</h2>
+      {meta && <span className="font-mono text-xs tabular-nums text-muted">{meta}</span>}
     </div>
   );
 }
 
-function Empty({ text, pulse }: { text: string; pulse?: boolean }) {
-  return (
-    <p className="flex items-center gap-2 rounded-lg border border-dashed border-line p-4 text-sm text-muted">
-      {pulse && <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-accent" />}
-      {text}
-    </p>
-  );
+function Empty({ text }: { text: string }) {
+  return <p className="rounded-xl border border-dashed border-line p-4 text-sm leading-relaxed text-muted">{text}</p>;
 }
-
-function DocIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path d="M4 1.5h5.5L13 5v9.5H4z" stroke="var(--accent)" strokeWidth="1.4" strokeLinejoin="round" />
-      <path d="M9.5 1.5V5H13" stroke="var(--accent)" strokeWidth="1.4" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-const hostname = (url: string) => {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-};
 
 const preview = (md: string) =>
   md

@@ -23,7 +23,7 @@ export interface RunState {
   endedAt: number;
 }
 
-const initial: RunState = {
+export const initial: RunState = {
   status: "idle",
   mode: null,
   goal: "",
@@ -37,7 +37,7 @@ const initial: RunState = {
   endedAt: 0,
 };
 
-type Action =
+export type Action =
   | { type: "begin"; goal: string }
   | { type: "event"; event: RunEvent }
   | { type: "end"; status: RunState["status"]; error?: string }
@@ -45,7 +45,7 @@ type Action =
 
 let nextId = 1;
 
-function reducer(state: RunState, action: Action): RunState {
+export function reducer(state: RunState, action: Action): RunState {
   switch (action.type) {
     case "begin":
       return { ...initial, status: "running", goal: action.goal, startedAt: Date.now() };

@@ -12,10 +12,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const description =
+  "Describe a business goal. Orbit's AI agents plan it, research the live web and hand back ready-to-use deliverables.";
+
 export const metadata: Metadata = {
-  title: "Orbit — your AI operations team",
-  description:
-    "Describe a business goal. Orbit's agents plan it, research it live on the web and hand back ready-to-use deliverables.",
+  metadataBase: new URL("https://orbit-ai-agents.vercel.app"),
+  title: "Orbit | Your AI operations team",
+  description,
+  openGraph: { title: "Orbit | Your AI operations team", description, type: "website" },
+  twitter: { card: "summary_large_image", title: "Orbit | Your AI operations team", description },
 };
 
 export default function RootLayout({
