@@ -17,6 +17,7 @@ import { HeroReplay } from "@/components/landing/HeroReplay";
 import { Reveal } from "@/components/landing/Reveal";
 import { FeedRow, TaskList } from "@/components/mission";
 import { AGENT_COLOR, Logo } from "@/components/ui";
+import { UserMenu } from "@/components/UserMenu";
 import type { AgentRole, Task } from "@/lib/events";
 
 const REPO = "https://github.com/Tanvikorada/orbit-ai-agents";
@@ -330,12 +331,15 @@ function Nav() {
             GitHub
           </a>
         </div>
-        <Link
-          href="/workspace"
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-text px-4 py-2 text-sm font-medium text-bg transition hover:bg-white active:scale-[0.98]"
-        >
-          Launch a run
-        </Link>
+        <div className="ml-auto flex items-center gap-4">
+          <UserMenu />
+          <Link
+            href="/workspace"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-text px-4 py-2 text-sm font-medium text-bg transition hover:bg-white active:scale-[0.98]"
+          >
+            Launch a run
+          </Link>
+        </div>
       </div>
     </nav>
   );

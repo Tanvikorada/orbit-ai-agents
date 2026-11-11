@@ -18,6 +18,8 @@ export interface RunState {
   deliverables: Deliverable[];
   usage: { input: number; output: number };
   summary: string;
+  /** Set when the run is saved to the signed-in user's history. */
+  runId?: string;
   error: string;
   startedAt: number;
   endedAt: number;
@@ -62,6 +64,8 @@ export function reducer(state: RunState, action: Action): RunState {
 function applyEvent(state: RunState, e: RunEvent): RunState {
   const push = (item: FeedItem) => ({ ...state, feed: [...state.feed, item] });
   switch (e.type) {
+    case "saved":
+      return { ...state, runId: e.runId };
     case "start":
       return { ...state, mode: e.mode };
     case "thought":

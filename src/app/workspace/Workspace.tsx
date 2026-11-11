@@ -3,23 +3,21 @@
 import {
   ArrowRight,
   CheckCircle,
-  Copy,
-  DownloadSimple,
+  ClockCounterClockwise,
   FileText,
   LockSimple,
   Play,
   Plus,
   Stop,
   WarningCircle,
-  X,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { FeedRow, TaskList } from "@/components/mission";
 import { Logo } from "@/components/ui";
+import { UserMenu } from "@/components/UserMenu";
+import { Viewer } from "@/components/Viewer";
 import { EXAMPLE_GOALS } from "@/lib/examples";
 import type { Deliverable, Task } from "@/lib/events";
 import { CODE_KEY, readCode, useRun, type RunState } from "@/lib/useRun";
@@ -73,6 +71,7 @@ export default function Workspace() {
                 </button>
               )
             )}
+            <UserMenu />
           </div>
         </div>
         {running && <div className="progress-bar h-px" />}
@@ -123,16 +122,23 @@ function StatusPill({ state }: { state: RunState }) {
   );
 }
 
+interface Access {
+  locked: boolean;
+  signedIn: boolean;
+  limit: number;
+  remaining: number | null;
+}
+
 function Composer({ onStart }: { onStart: (goal: string, demo?: boolean) => void }) {
   const [goal, setGoal] = useState("");
-  const [locked, setLocked] = useState(false);
+  const [access, setAccess] = useState<Access | null>(null);
   const [code, setCode] = useState("");
 
   useEffect(() => {
     setCode(readCode());
     fetch("/api/run")
       .then((r) => r.json())
-      .then((d: { locked?: boolean }) => setLocked(Boolean(d.locked)))
+      .then((d: Access) => setAccess(d))
       .catch(() => {});
   }, []);
 
@@ -200,20 +206,41 @@ function Composer({ onStart }: { onStart: (goal: string, demo?: boolean) => void
           </div>
         </form>
 
-        {locked && (
-          <div className="mt-4 flex flex-col gap-2">
-            <label htmlFor="code" className="flex items-center gap-1.5 text-sm text-muted">
-              <LockSimple size={14} /> Access code for live runs
-            </label>
-            <input
-              id="code"
-              type="password"
-              value={code}
-              onChange={(e) => saveCode(e.target.value)}
-              autoComplete="off"
-              className="w-full rounded-full border border-line bg-panel px-4 py-2 text-sm outline-none transition-colors focus:border-accent sm:w-72"
-            />
-            <p className="text-xs text-muted">Without a code, runs play as a demo.</p>
+        {access?.locked && (
+          <div className="mt-4 flex flex-col gap-3 text-sm">
+            {access.signedIn ? (
+              <p className="text-muted">
+                <span className="text-text tabular-nums">
+                  {code ? "Unlimited" : `${access.remaining ?? 0} of ${access.limit}`}
+                </span>{" "}
+                live runs left today.
+              </p>
+            ) : (
+              <p className="text-muted">
+                <Link href="/login?next=/workspace" className="text-accent underline-offset-4 hover:underline">
+                  Sign in
+                </Link>{" "}
+                for {access.limit} free live runs a day. Without it, runs play as a demo.
+              </p>
+            )}
+            <details className="group" open={Boolean(code)}>
+              <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-muted transition hover:text-text">
+                <LockSimple size={14} /> Have an access code?
+              </summary>
+              <div className="mt-2 flex flex-col gap-2">
+                <label htmlFor="code" className="text-muted">
+                  Access code for unlimited live runs
+                </label>
+                <input
+                  id="code"
+                  type="password"
+                  value={code}
+                  onChange={(e) => saveCode(e.target.value)}
+                  autoComplete="off"
+                  className="w-full rounded-full border border-line bg-panel px-4 py-2 outline-none transition-colors focus:border-accent sm:w-72"
+                />
+              </div>
+            </details>
           </div>
         )}
 
@@ -311,6 +338,14 @@ function LiveFeed({ state, onOpen }: { state: RunState; onOpen: (id: string) => 
               <CheckCircle size={16} weight="fill" /> Mission complete
             </p>
             <p className="mt-2 text-[15px] leading-relaxed">{state.summary}</p>
+            {state.runId && (
+              <Link
+                href={`/runs/${state.runId}`}
+                className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted transition hover:text-text"
+              >
+                <ClockCounterClockwise size={14} /> Saved to My runs
+              </Link>
+            )}
           </div>
         )}
         {state.status === "error" && (
@@ -365,73 +400,6 @@ function Deliverables({
         </ul>
       )}
     </section>
-  );
-}
-
-function Viewer({ deliverable, onClose }: { deliverable: Deliverable; onClose: () => void }) {
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const download = () => {
-    const blob = new Blob([deliverable.content], { type: "text/markdown" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${deliverable.title.replace(/[^\w-]+/g, "-").toLowerCase()}.md`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal>
-      <div
-        className="slide-in flex h-full w-full max-w-3xl flex-col border-l border-line bg-panel"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-2 border-b border-line px-5 py-3">
-          <FileText size={16} className="text-accent" />
-          <span className="font-mono text-[10px] uppercase tracking-wider text-muted">{deliverable.kind}</span>
-          <div className="ml-auto flex gap-2">
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(deliverable.content).then(() => {
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                });
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-sm transition hover:bg-panel-2"
-            >
-              {copied ? <CheckCircle size={14} weight="fill" className="text-[var(--analyst)]" /> : <Copy size={14} />}
-              {copied ? "Copied" : "Copy"}
-            </button>
-            <button
-              onClick={download}
-              className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-sm transition hover:bg-panel-2"
-            >
-              <DownloadSimple size={14} /> Download
-            </button>
-            <button
-              onClick={onClose}
-              className="rounded-full p-1.5 text-muted transition hover:bg-panel-2 hover:text-text"
-              aria-label="Close"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-        <article className="md scroll-thin flex-1 overflow-y-auto px-6 py-8 sm:px-10">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{ a: (props) => <a {...props} target="_blank" rel="noreferrer" /> }}
-          >
-            {deliverable.content}
-          </ReactMarkdown>
-        </article>
-      </div>
-    </div>
   );
 }
 

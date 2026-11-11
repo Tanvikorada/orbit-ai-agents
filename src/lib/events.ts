@@ -27,6 +27,7 @@ export interface Deliverable {
 
 export type RunEvent =
   | { type: "start"; mode: "live" | "demo"; goal: string }
+  | { type: "saved"; runId: string }
   | { type: "thought"; text: string }
   | { type: "say"; text: string }
   | { type: "tasks"; tasks: Task[] }

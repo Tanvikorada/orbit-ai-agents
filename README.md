@@ -14,6 +14,9 @@ Describe a business outcome in one sentence. Orbit's four agents (Researcher, An
 - **Free-tier aware.** When Gemini hits its rate limit (429 or 503), the run waits and retries with backoff instead of failing.
 - **Streaming UX.** Reasoning summaries, narration, searches, task changes and deliverables stream to the browser as NDJSON and render live on a three-panel workspace.
 - **Production details.** Tool inputs are validated with Zod. The loop handles `pause_turn`, `refusal` and `max_tokens`, uses typed API errors, caches the system prompt and has server-side refusal fallbacks. Stop/abort works end to end, and the last run is restored after a page refresh.
+- **Accounts and history.** Sign in with Google or an email link (Supabase Auth). Live runs and their deliverables are saved to Postgres, and row-level security plus column-level grants keep each user's runs private and the daily limit tamper-proof.
+- **Daily limits.** Signed-in users get `DAILY_RUN_LIMIT` live runs a day (default 3), and the owner's access code is unlimited.
+- **Gmail and Notion export.** Every email in a deliverable opens as a prefilled Gmail draft, and any deliverable can be copied straight into a new Notion page.
 - **Demo mode.** With no API key, a scripted run plays instead, so a public deploy always works.
 
 ## Architecture
