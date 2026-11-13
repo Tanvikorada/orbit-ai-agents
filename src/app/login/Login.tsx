@@ -3,9 +3,9 @@
 import { ArrowRight, EnvelopeSimple, GoogleLogo, WarningCircle } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/ui";
-import { DAILY_RUN_LIMIT } from "@/lib/supabase/config";
+import { DAILY_RUN_LIMIT, SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
 
 export default function Login() {
@@ -18,6 +18,16 @@ export default function Login() {
   const [message, setMessage] = useState(
     params.get("error") ? "That sign-in link has expired or was opened in a different browser. Request a new one." : "",
   );
+
+  // Show "Continue with Google" only once Google is enabled in Supabase;
+  // otherwise the button leads to a raw "provider is not enabled" error page.
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+  useEffect(() => {
+    fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_KEY } })
+      .then((r) => r.json())
+      .then((s: { external?: { google?: boolean } }) => setGoogleEnabled(Boolean(s.external?.google)))
+      .catch(() => {});
+  }, []);
 
   const redirectTo = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
@@ -32,7 +42,7 @@ export default function Login() {
       setState("error");
       setMessage(
         error.status === 429
-          ? "Too many sign-in emails were sent recently. Wait a few minutes, or continue with Google."
+          ? "Too many sign-in emails were sent recently. Wait a few minutes and try again."
           : error.message,
       );
     } else {
@@ -75,18 +85,22 @@ export default function Login() {
           </div>
         ) : (
           <>
-            <button
-              onClick={google}
-              className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full border border-line bg-panel px-4 py-2.5 transition hover:bg-panel-2 active:scale-[0.98]"
-            >
-              <GoogleLogo size={18} weight="bold" /> Continue with Google
-            </button>
+            {googleEnabled && (
+              <>
+                <button
+                  onClick={google}
+                  className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full border border-line bg-panel px-4 py-2.5 transition hover:bg-panel-2 active:scale-[0.98]"
+                >
+                  <GoogleLogo size={18} weight="bold" /> Continue with Google
+                </button>
 
-            <div className="my-6 flex items-center gap-3 text-xs text-muted">
-              <span className="h-px flex-1 bg-line" /> or <span className="h-px flex-1 bg-line" />
-            </div>
+                <div className="my-6 flex items-center gap-3 text-xs text-muted">
+                  <span className="h-px flex-1 bg-line" /> or <span className="h-px flex-1 bg-line" />
+                </div>
+              </>
+            )}
 
-            <form onSubmit={sendLink} className="flex flex-col gap-2">
+            <form onSubmit={sendLink} className={`flex flex-col gap-2 ${googleEnabled ? "" : "mt-8"}`}>
               <label htmlFor="email" className="text-sm text-muted">
                 Email
               </label>
